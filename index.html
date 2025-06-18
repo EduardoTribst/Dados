@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calculadora de Probabilidades de Dados</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      background: linear-gradient(to right, #f8f9fa, #e0f7fa);
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #00796B;
+    }
+
+    .controls {
+      margin-bottom: 20px;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 10px;
+      display: inline-block;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    input, select {
+      padding: 8px;
+      margin: 8px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #009688;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #00796B;
+    }
+
+    .scroll-box {
+      max-height: 300px;
+      overflow-y: auto;
+      margin: 0 auto;
+      width: 360px;
+      border: 1px solid #ccc;
+      background: #fff;
+      border-radius: 5px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 6px 4px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f0f0f0;
+      position: sticky;
+      top: 0;
+    }
+
+    .bar {
+      display: inline-block;
+      height: 10px;
+      background-color: #4CAF50;
+      vertical-align: middle;
+    }
+
+    .summary {
+      margin-top: 20px;
+      font-size: 17px;
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 8px;
+      display: inline-block;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Calculadora de Probabilidades de Dados</h1>
+
+  <div class="controls">
+    <label>Quantidade de Dados: <input type="number" id="diceCount" min="1" value="2" /></label>
+    <label>Faces por Dado: <input type="number" id="faceCount" min="2" value="6" /></label>
+    <label>
+      Condição:
+      <select id="rule">
+        <option value="soma">Soma</option>
+        <option value="maximo">Maior Valor</option>
+        <option value="minimo">Menor Valor</option>
+      </select>
+    </label>
+    <br />
+    <label>Valor Alvo: <input type="number" id="target" /></label>
+    <br />
+    <button onclick="calcular()">Calcular</button>
+  </div>
+
+  <div id="output"></div>
+
+  <script>
+    function calcular() {
+      const dados = parseInt(document.getElementById("diceCount").value);
+      const faces = parseInt(document.getElementById("faceCount").value);
+      const regra = document.getElementById("rule").value;
+      const alvoInput = document.getElementById("target").value;
+      const alvo = alvoInput ? parseInt(alvoInput) : null;
+
+      const resultados = {};
+      let total = 0;
+
+      function recursao(atual, profundidade) {
+        if (profundidade === dados) {
+          let valor;
+          if (regra === "soma") valor = atual.reduce((a, b) => a + b, 0);
+          if (regra === "maximo") valor = Math.max(...atual);
+          if (regra === "minimo") valor = Math.min(...atual);
+
+          resultados[valor] = (resultados[valor] || 0) + 1;
+          total++;
+          return;
+        }
+
+        for (let i = 1; i <= faces; i++) {
+          recursao([...atual, i], profundidade + 1);
+        }
+      }
+
+      recursao([], 0);
+
+      const maxProb = Math.max(...Object.values(resultados).map(c => c / total));
+
+      let html = `<h3>Probabilidades (${regra})</h3><div class="scroll-box"><table><tr><th>Resultado</th><th>Chance</th><th></th></tr>`;
+      const chaves = Object.keys(resultados).map(Number).sort((a, b) => a - b);
+
+      let exato = 0, maior = 0, menor = 0;
+
+      for (let valor of chaves) {
+        const contagem = resultados[valor];
+        const prob = contagem / total;
+        const texto = (prob * 100).toFixed(2) + "%";
+        const largura = Math.round((prob / maxProb) * 100);
+
+        html += `<tr>
+          <td>${valor}</td>
+          <td>${texto}</td>
+          <td><div class="bar" style="width:${largura}px"></div></td>
+        </tr>`;
+
+        if (alvo !== null) {
+          if (valor === alvo) exato += contagem;
+          if (valor > alvo) maior += contagem;
+          if (valor < alvo) menor += contagem;
+        }
+      }
+
+      html += `</table></div>`;
+
+      if (alvo !== null) {
+        html += `
+          <div class="summary">
+            <p>🎯 Alvo = <strong>${alvo}</strong></p>
+            <p>🔹 Exato: ${(exato / total * 100).toFixed(2)}%</p>
+            <p>🔺 Maior: ${(maior / total * 100).toFixed(2)}%</p>
+            <p>🔻 Menor: ${(menor / total * 100).toFixed(2)}%</p>
+          </div>
+        `;
+      }
+
+      document.getElementById("output").innerHTML = html;
+    }
+  </script>
+
+</body>
+</html>
