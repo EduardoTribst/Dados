@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Calculadora de Probabilidades de Dados</title>
   <style>
     body {
@@ -11,21 +11,18 @@
       background: linear-gradient(to right, #f8f9fa, #e0f7fa);
       padding: 20px;
     }
-
     h1 {
       margin-bottom: 20px;
       color: #00796B;
     }
-
     .controls {
       margin-bottom: 20px;
-      background: #ffffff;
+      background: #fff;
       padding: 20px;
       border-radius: 10px;
       display: inline-block;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-
     input, select {
       padding: 8px;
       margin: 8px;
@@ -33,7 +30,6 @@
       border-radius: 5px;
       border: 1px solid #ccc;
     }
-
     button {
       padding: 10px 20px;
       font-size: 16px;
@@ -43,69 +39,65 @@
       border-radius: 5px;
       cursor: pointer;
     }
-
     button:hover {
       background-color: #00796B;
     }
-
     .scroll-box {
-      max-height: 300px;
+      max-height: 400px;
       overflow-y: auto;
       margin: 0 auto;
-      width: 360px;
+      width: 700px;
       border: 1px solid #ccc;
       background: #fff;
       border-radius: 5px;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 14px;
+      font-size: 15px;
+      table-layout: auto;
     }
-
     th, td {
-      padding: 6px 4px;
+      padding: 10px 8px;
       border-bottom: 1px solid #ddd;
+      text-align: center;
     }
-
     th {
       background-color: #f0f0f0;
       position: sticky;
       top: 0;
+      z-index: 1;
     }
-
     .bar {
       display: inline-block;
       height: 10px;
       background-color: #4CAF50;
       vertical-align: middle;
     }
-
     .summary {
       margin-top: 20px;
       font-size: 17px;
-      background: #ffffff;
+      background: #fff;
       padding: 15px;
       border-radius: 8px;
       display: inline-block;
-      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
 
-  <h1>Calculadora de Probabilidades de Dados</h1>
+  <h1>🎲 Calculadora de Probabilidades de Dados</h1>
 
   <div class="controls">
     <label>Quantidade de Dados: <input type="number" id="diceCount" min="1" value="2" /></label>
     <label>Faces por Dado: <input type="number" id="faceCount" min="2" value="6" /></label>
     <label>
-      Condição:
+      Regra:
       <select id="rule">
-        <option value="soma">Soma</option>
-        <option value="maximo">Maior Valor</option>
-        <option value="minimo">Menor Valor</option>
+        <option value="sum">Soma</option>
+        <option value="max">Maior Valor</option>
+        <option value="min">Menor Valor</option>
       </select>
     </label>
     <br />
@@ -116,78 +108,142 @@
 
   <div id="output"></div>
 
-  <script>
-    function calcular() {
-      const dados = parseInt(document.getElementById("diceCount").value);
-      const faces = parseInt(document.getElementById("faceCount").value);
-      const regra = document.getElementById("rule").value;
-      const alvoInput = document.getElementById("target").value;
-      const alvo = alvoInput ? parseInt(alvoInput) : null;
+<script>
+  // Função para calcular o MDC (máximo divisor comum)
+  function mdc(a, b) {
+    while (b) {
+      const t = b;
+      b = a % b;
+      a = t;
+    }
+    return a;
+  }
 
-      const resultados = {};
-      let total = 0;
+  // Função para simplificar fração
+  function simplificarFracao(num, den) {
+    const d = mdc(num, den);
+    return [num / d, den / d];
+  }
 
-      function recursao(atual, profundidade) {
-        if (profundidade === dados) {
-          let valor;
-          if (regra === "soma") valor = atual.reduce((a, b) => a + b, 0);
-          if (regra === "maximo") valor = Math.max(...atual);
-          if (regra === "minimo") valor = Math.min(...atual);
+  function calcular() {
+    const dados = parseInt(document.getElementById("diceCount").value);
+    const faces = parseInt(document.getElementById("faceCount").value);
+    const regra = document.getElementById("rule").value;
+    const alvoInput = document.getElementById("target").value;
+    const alvo = alvoInput ? parseInt(alvoInput) : null;
 
-          resultados[valor] = (resultados[valor] || 0) + 1;
-          total++;
-          return;
-        }
+    if (dados < 1 || faces < 2) {
+      alert("Digite valores válidos para dados e faces.");
+      return;
+    }
 
-        for (let i = 1; i <= faces; i++) {
-          recursao([...atual, i], profundidade + 1);
+    let distrib;
+
+    if (regra === "sum") {
+      distrib = distribuirSoma(dados, faces);
+    } else if (regra === "max") {
+      distrib = distribuirMax(dados, faces);
+    } else {
+      distrib = distribuirMin(dados, faces);
+    }
+
+    mostrarResultado(distrib, alvo, regra, dados);
+  }
+
+  // Soma: distribuição de probabilidades usando DP
+  function distribuirSoma(dados, faces) {
+    let dp = new Array(dados * faces + 1).fill(0);
+    for (let i = 1; i <= faces; i++) dp[i] = 1;
+
+    for (let d = 2; d <= dados; d++) {
+      const temp = new Array(d * faces + 1).fill(0);
+      for (let sum = d - 1; sum < dp.length; sum++) {
+        if (dp[sum] === 0) continue;
+        for (let f = 1; f <= faces; f++) {
+          temp[sum + f] += dp[sum];
         }
       }
+      dp = temp;
+    }
 
-      recursao([], 0);
+    // Normaliza para probabilidades e mantem contagem exata (número de combinações)
+    const totalComb = Math.pow(faces, dados);
+    const probs = dp.slice(dados).map(c => ({ count: c, prob: c / totalComb }));
+    return probs;
+  }
 
-      const maxProb = Math.max(...Object.values(resultados).map(c => c / total));
+  // Máximo: probabilidade de máximo valor com fórmula direta
+  function distribuirMax(dados, faces) {
+    const prob = [];
+    const totalComb = Math.pow(faces, dados);
+    for (let v = 1; v <= faces; v++) {
+      const c = Math.pow(v, dados) - Math.pow(v - 1, dados);
+      prob.push({ count: c, prob: c / totalComb });
+    }
+    return prob;
+  }
 
-      let html = `<h3>Probabilidades (${regra})</h3><div class="scroll-box"><table><tr><th>Resultado</th><th>Chance</th><th></th></tr>`;
-      const chaves = Object.keys(resultados).map(Number).sort((a, b) => a - b);
+  // Mínimo: probabilidade do menor valor
+  function distribuirMin(dados, faces) {
+    const prob = [];
+    const totalComb = Math.pow(faces, dados);
+    for (let v = 1; v <= faces; v++) {
+      const c = Math.pow(faces - v + 1, dados) - (v < faces ? Math.pow(faces - v, dados) : 0);
+      prob.push({ count: c, prob: c / totalComb });
+    }
+    return prob;
+  }
 
-      let exato = 0, maior = 0, menor = 0;
+  function mostrarResultado(distrib, alvo, regra, dados) {
+    const total = distrib.reduce((a, b) => a + b.prob, 0);
+    const maxProb = Math.max(...distrib.map(d => d.prob));
 
-      for (let valor of chaves) {
-        const contagem = resultados[valor];
-        const prob = contagem / total;
-        const texto = (prob * 100).toFixed(2) + "%";
-        const largura = Math.round((prob / maxProb) * 100);
+    let html = `<h3>Probabilidades Teóricas</h3><div class="scroll-box"><table><tr><th>Resultado</th><th>Chance</th><th>Fração</th><th></th></tr>`;
 
-        html += `<tr>
-          <td>${valor}</td>
-          <td>${texto}</td>
-          <td><div class="bar" style="width:${largura}px"></div></td>
-        </tr>`;
+    let exato = 0, maior = 0, menor = 0;
 
-        if (alvo !== null) {
-          if (valor === alvo) exato += contagem;
-          if (valor > alvo) maior += contagem;
-          if (valor < alvo) menor += contagem;
-        }
-      }
+    for (let i = 0; i < distrib.length; i++) {
+      const valor = regra === "sum" ? i + dados : i + 1;
+      const probObj = distrib[i];
+      const prob = probObj.prob;
+      const count = probObj.count;
+      const den = Math.pow(document.getElementById("faceCount").value, document.getElementById("diceCount").value);
+      const [numSim, denSim] = simplificarFracao(count, den);
 
-      html += `</table></div>`;
+      const texto = (prob * 100).toFixed(2) + "%";
+      const fracao = `${numSim} / ${denSim}`;
+      const largura = Math.round((prob / maxProb) * 100);
+
+      html += `<tr>
+        <td>${valor}</td>
+        <td>${texto}</td>
+        <td>${fracao}</td>
+        <td><div class="bar" style="width:${largura}px"></div></td>
+      </tr>`;
 
       if (alvo !== null) {
-        html += `
-          <div class="summary">
-            <p>🎯 Alvo = <strong>${alvo}</strong></p>
-            <p>🔹 Exato: ${(exato / total * 100).toFixed(2)}%</p>
-            <p>🔺 Maior: ${(maior / total * 100).toFixed(2)}%</p>
-            <p>🔻 Menor: ${(menor / total * 100).toFixed(2)}%</p>
-          </div>
-        `;
+        if (valor === alvo) exato += prob;
+        if (valor > alvo) maior += prob;
+        if (valor < alvo) menor += prob;
       }
-
-      document.getElementById("output").innerHTML = html;
     }
-  </script>
+
+    html += `</table></div>`;
+
+    if (alvo !== null) {
+      html += `
+        <div class="summary">
+          <p>🎯 Alvo = <strong>${alvo}</strong></p>
+          <p>🔹 Exato: ${(exato * 100).toFixed(2)}%</p>
+          <p>🔺 Maior: ${(maior * 100).toFixed(2)}%</p>
+          <p>🔻 Menor: ${(menor * 100).toFixed(2)}%</p>
+        </div>
+      `;
+    }
+
+    document.getElementById("output").innerHTML = html;
+  }
+</script>
 
 </body>
 </html>
