@@ -96,13 +96,13 @@
 </head>
 <body>
 
-<h1>Calculadora de Probabilidades de Dados</h1>
+<h1>🎲 Calculadora de Probabilidades de Dados</h1>
 
 <div class="controls">
   <label>Quantidade de Dados: <input type="number" id="diceCount" min="1" value="2" /></label>
   <label>Faces por Dado: <input type="number" id="faceCount" min="2" value="6" /></label>
   <label>
-    Condição:
+    Regra:
     <select id="rule">
       <option value="sum">Soma</option>
       <option value="max">Maior Valor</option>
@@ -111,7 +111,7 @@
   </label>
   <br />
   <label>Valor Alvo: <input type="number" id="target" /></label>
-  <label>Incremento: <input type="number" id="increment" value="0" /></label>
+  <label>Incremento fixo: <input type="number" id="increment" value="0" /></label>
   <br />
   <button onclick="calcular()">Calcular</button>
 </div>
@@ -195,13 +195,20 @@ function mostrarResultado(distrib, alvo, regra, dados, faces, incremento) {
   const totalComb = Math.pow(faces, dados);
   const maxProb = Math.max(...distrib.map(d => d.prob));
 
-  let html = `<h3>Probabilidades Teóricas</h3><div class="scroll-box"><table><tr><th>Resultado</th><th>Chance</th><th>Fração</th><th></th></tr>`;
+  let html = `<h3>Probabilidades Teóricas</h3>`;
+  if (incremento !== 0) {
+    html += `<p style="font-style: italic;">* Os valores exibidos incluem incremento de +${incremento}.</p>`;
+  }
+
+  html += `<div class="scroll-box"><table><tr><th>Resultado</th><th>Chance</th><th>Fração</th><th></th></tr>`;
 
   let exato = 0, maior = 0, menor = 0, maiorIgual = 0, menorIgual = 0;
   let exatoC = 0, maiorC = 0, menorC = 0, maiorIgualC = 0, menorIgualC = 0;
 
   for (let i = 0; i < distrib.length; i++) {
-    const valor = regra === "sum" ? i + dados + incremento : i + 1;
+    let baseValor = regra === "sum" ? i + dados : i + 1;
+    const valor = baseValor + incremento;
+
     const { prob, count } = distrib[i];
     const [numS, denS] = simplificarFracao(count, totalComb);
 
@@ -223,10 +230,6 @@ function mostrarResultado(distrib, alvo, regra, dados, faces, incremento) {
   }
 
   html += `</table></div>`;
-
-  if (regra === "sum" && incremento !== 0) {
-    html += `<p style="margin-top:10px; font-style: italic;">* Todos os valores somados receberam incremento de +${incremento}.</p>`;
-  }
 
   if (alvo !== null) {
     const [n1, d1] = simplificarFracao(exatoC, totalComb);
