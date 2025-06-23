@@ -96,13 +96,13 @@
 </head>
 <body>
 
-<h1>🎲 Calculadora de Probabilidades de Dados</h1>
+<h1>Calculadora de Probabilidades de Dados</h1>
 
 <div class="controls">
   <label>Quantidade de Dados: <input type="number" id="diceCount" min="1" value="2" /></label>
   <label>Faces por Dado: <input type="number" id="faceCount" min="2" value="6" /></label>
   <label>
-    Regra:
+    Condição:
     <select id="rule">
       <option value="sum">Soma</option>
       <option value="max">Maior Valor</option>
@@ -111,6 +111,7 @@
   </label>
   <br />
   <label>Valor Alvo: <input type="number" id="target" /></label>
+  <label>Incremento: <input type="number" id="increment" value="0" /></label>
   <br />
   <button onclick="calcular()">Calcular</button>
 </div>
@@ -131,6 +132,7 @@ function calcular() {
   const faces = parseInt(document.getElementById("faceCount").value);
   const regra = document.getElementById("rule").value;
   const alvoInput = document.getElementById("target").value;
+  const incremento = parseInt(document.getElementById("increment").value) || 0;
   const alvo = alvoInput ? parseInt(alvoInput) : null;
 
   if (dados < 1 || faces < 2) {
@@ -147,7 +149,7 @@ function calcular() {
     distrib = distribuirMin(dados, faces);
   }
 
-  mostrarResultado(distrib, alvo, regra, dados, faces);
+  mostrarResultado(distrib, alvo, regra, dados, faces, incremento);
 }
 
 function distribuirSoma(dados, faces) {
@@ -189,7 +191,7 @@ function distribuirMin(dados, faces) {
   return prob;
 }
 
-function mostrarResultado(distrib, alvo, regra, dados, faces) {
+function mostrarResultado(distrib, alvo, regra, dados, faces, incremento) {
   const totalComb = Math.pow(faces, dados);
   const maxProb = Math.max(...distrib.map(d => d.prob));
 
@@ -199,7 +201,7 @@ function mostrarResultado(distrib, alvo, regra, dados, faces) {
   let exatoC = 0, maiorC = 0, menorC = 0, maiorIgualC = 0, menorIgualC = 0;
 
   for (let i = 0; i < distrib.length; i++) {
-    const valor = regra === "sum" ? i + dados : i + 1;
+    const valor = regra === "sum" ? i + dados + incremento : i + 1;
     const { prob, count } = distrib[i];
     const [numS, denS] = simplificarFracao(count, totalComb);
 
@@ -221,6 +223,10 @@ function mostrarResultado(distrib, alvo, regra, dados, faces) {
   }
 
   html += `</table></div>`;
+
+  if (regra === "sum" && incremento !== 0) {
+    html += `<p style="margin-top:10px; font-style: italic;">* Todos os valores somados receberam incremento de +${incremento}.</p>`;
+  }
 
   if (alvo !== null) {
     const [n1, d1] = simplificarFracao(exatoC, totalComb);
